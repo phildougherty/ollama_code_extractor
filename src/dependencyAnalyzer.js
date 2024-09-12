@@ -8,7 +8,6 @@ async function isFile(filePath) {
     const stats = await fs.stat(filePath);
     return stats.isFile();
   } catch (error) {
-    console.error(`Error checking file ${filePath}:`, error.message);
     return false;
   }
 }
@@ -40,7 +39,42 @@ function parseImports(content, filePath) {
   }).filter(Boolean);
 }
 
-async function getDependencies(filePath, baseDir) {
+async function resolveFilePath(basePath, projectRoot, extensions = ['.js', '.jsx', '.ts', '.tsx']) {
+  const paths = [
+    basePath,
+    path.join(projectRoot, basePath),
+    path.join(projectRoot, 'src', basePath),
+    path.join(projectRoot, 'components', basePath),
+    path.join(projectRoot, 'contexts', basePath),
+  ];
+
+  for (const p of paths) {
+    // Check if the file exists as is
+    if (await isFile(p)) {
+      return p;
+    }
+
+    // Try adding extensions
+    for (const ext of extensions) {
+      const pathWithExt = `${p}${ext}`;
+      if (await isFile(pathWithExt)) {
+        return pathWithExt;
+      }
+    }
+
+    // Check for index files in directories
+    for (const ext of extensions) {
+      const indexPath = path.join(p, `index${ext}`);
+      if (await isFile(indexPath)) {
+        return indexPath;
+      }
+    }
+  }
+
+  return null;
+}
+
+async function getDependencies(filePath, baseDir, projectRoot) {
   const visited = new Set();
   const dependencies = new Set();
 
@@ -48,25 +82,10 @@ async function getDependencies(filePath, baseDir) {
     if (visited.has(currentPath)) return;
     visited.add(currentPath);
 
-    let resolvedPath = currentPath;
-    if (!path.extname(resolvedPath)) {
-      const extensions = ['.js', '.jsx', '.ts', '.tsx'];
-      for (const ext of extensions) {
-        const withExt = `${resolvedPath}${ext}`;
-        if (await fs.pathExists(withExt)) {
-          resolvedPath = withExt;
-          break;
-        }
-      }
-    }
+    let resolvedPath = await resolveFilePath(currentPath, projectRoot);
 
-    if (!(await fs.pathExists(resolvedPath))) {
-      console.warn(`File not found: ${resolvedPath}`);
-      return;
-    }
-
-    if (!(await isFile(resolvedPath))) {
-      console.warn(`Not a file: ${resolvedPath}`);
+    if (!resolvedPath) {
+      console.warn(`File not found: ${currentPath}`);
       return;
     }
 

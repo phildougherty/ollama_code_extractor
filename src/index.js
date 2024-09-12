@@ -8,6 +8,7 @@ const { extractCodeFromResponse } = require('./codeExtractor');
 const { saveCodeToGit } = require('./gitManager');
 const { getChatCompletion } = require('./ollama');
 const { getDependencies } = require('./dependencyAnalyzer');
+const { optimizeAllFiles } = require('./optimizeAllFiles');
 
 async function isGitRepository(dir) {
   try {
@@ -62,12 +63,17 @@ async function main() {
       type: 'string',
       description: 'Additional text prompt for the model'
     })
+    .option('optimize-all', {
+      alias: 'a',
+      type: 'boolean',
+      description: 'Optimize all source files in the repository'
+    })
     .help('h')
     .alias('h', 'help')
     .epilog('For more information, visit https://github.com/yourusername/code-optimize-extractor')
     .argv;
 
-  let { model, file: singleFile, gitRepo, prompt } = argv;
+  let { model, file: singleFile, gitRepo, prompt, optimizeAll } = argv;
 
   // Check if the specified directory is a git repository
   if (!(await isGitRepository(gitRepo))) {
@@ -76,15 +82,11 @@ async function main() {
     process.exit(1);
   }
 
-  let files = [];
-
-  console.log('Starting code optimization process...');
-  console.log(`Model: ${model}`);
-  console.log(`Git repo: ${gitRepo}`);
-  console.log(`File: ${singleFile || 'Not specified'}`);
-  console.log(`Prompt: ${prompt || 'Not specified'}`);
-
-  if (singleFile) {
+  if (optimizeAll) {
+    console.log('Starting optimization process for all files...');
+    await optimizeAllFiles(gitRepo, model);
+  } else if (singleFile) {
+    // Existing single file optimization logic
     singleFile = path.resolve(gitRepo, singleFile);
     if (!(await isFile(singleFile))) {
       console.error(`Error: ${singleFile} is not a file or doesn't exist.`);
@@ -95,27 +97,20 @@ async function main() {
     const baseDir = path.dirname(singleFile);
     try {
       const dependencies = await getDependencies(singleFile, baseDir);
-      files = dependencies.map(dep => path.join(baseDir, dep));
+      const files = dependencies.map(dep => path.join(baseDir, dep));
       console.log(`Found ${files.length} dependent files.`);
-    } catch (error) {
-      console.error('Error analyzing dependencies:', error.message);
-      return;
-    }
-  }
 
-  let fileContents = '';
-  if (files.length > 0) {
-    for (const file of files) {
-      console.log(`Reading file: ${file}`);
-      const content = await readFileContent(file);
-      if (content) {
-        fileContents += `File: ${path.relative(gitRepo, file)}\n\n${content}\n\n`;
+      let fileContents = '';
+      for (const file of files) {
+        console.log(`Reading file: ${file}`);
+        const content = await readFileContent(file);
+        if (content) {
+          fileContents += `File: ${path.relative(gitRepo, file)}\n\n${content}\n\n`;
+        }
       }
-    }
-  }
 
-  console.log('Preparing prompt for the model...');
-  const modelPrompt = `
+      console.log('Preparing prompt for the model...');
+      const modelPrompt = `
 Analyze the following code and provide a complete, production-ready implementation that addresses any issues, implements missing features, and optimizes the code. Focus on generating high-quality, functional code with minimal explanations.
 
 ${fileContents}
@@ -131,22 +126,25 @@ Respond with full file contents, using the format:
 For multiple files, repeat this format for each file.
 `;
 
-  try {
-    console.log('Sending request to Ollama API...');
-    const chatResponse = await getChatCompletion(model, modelPrompt);
-    console.log('Received response from Ollama API.');
-    
-    const extractedFiles = extractCodeFromResponse(chatResponse);
-    
-    if (extractedFiles.length > 0) {
-      console.log(`Extracted ${extractedFiles.length} file(s) from the response.`);
-      await saveCodeToGit(gitRepo, extractedFiles);
-      console.log(`Code analysis committed to a new branch in the git repository: ${gitRepo}`);
-    } else {
-      console.log("No actionable insights found in the chat response.");
+      console.log('Sending request to Ollama API...');
+      const chatResponse = await getChatCompletion(model, modelPrompt);
+      console.log('Received response from Ollama API.');
+      
+      const extractedFiles = extractCodeFromResponse(chatResponse);
+      
+      if (extractedFiles.length > 0) {
+        console.log(`Extracted ${extractedFiles.length} file(s) from the response.`);
+        await saveCodeToGit(gitRepo, extractedFiles);
+        console.log(`Code analysis committed to a new branch in the git repository: ${gitRepo}`);
+      } else {
+        console.log("No actionable insights found in the chat response.");
+      }
+    } catch (error) {
+      console.error('Error analyzing dependencies:', error.message);
     }
-  } catch (error) {
-    console.error('Error:', error.message);
+  } else {
+    console.error('Error: Please specify either --file or --optimize-all');
+    process.exit(1);
   }
 }
 
