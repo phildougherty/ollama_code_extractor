@@ -4,7 +4,59 @@ const { execSync } = require('child_process');
 const simpleGit = require('simple-git');
 const { getDependencies } = require('./dependencyAnalyzer');
 
-// ... (keep the existing functions)
+const EXCLUDED_DIRS = ['node_modules', '.git', 'build', 'dist', 'public'];
+const EXCLUDED_FILES = ['.min.js', '.bundle.js'];
+
+async function getAllSourceFiles(dir, extensions = ['.js', '.ts', '.jsx', '.tsx']) {
+  let files = [];
+  try {
+    const items = await fs.readdir(dir);
+
+    for (const item of items) {
+      const fullPath = path.join(dir, item);
+      try {
+        const stat = await fs.lstat(fullPath);
+
+        if (stat.isSymbolicLink()) {
+          console.log(`Skipping symlink: ${fullPath}`);
+          continue;
+        }
+
+        if (stat.isDirectory()) {
+          if (!EXCLUDED_DIRS.includes(item)) {
+            files = files.concat(await getAllSourceFiles(fullPath, extensions));
+          }
+        } else if (stat.isFile() && 
+                   extensions.includes(path.extname(item)) && 
+                   !EXCLUDED_FILES.some(excluded => item.includes(excluded))) {
+          files.push(fullPath);
+        }
+      } catch (error) {
+        console.error(`Error processing ${fullPath}:`, error.message);
+      }
+    }
+  } catch (error) {
+    console.error(`Error reading directory ${dir}:`, error.message);
+  }
+
+  return files;
+}
+
+async function optimizeFile(file, repoPath, model) {
+  const relativeFilePath = path.relative(repoPath, file);
+  console.log(`\nOptimizing file: ${relativeFilePath}`);
+
+  const baseDir = path.dirname(file);
+  const dependencies = await getDependencies(file, baseDir, repoPath);
+  const relatedFiles = dependencies.map(dep => path.join(baseDir, dep));
+
+  const branchName = `optimize-${relativeFilePath.replace(/[^a-zA-Z0-9]/g, '-')}`;
+  
+  const command = `code-optimize-extractor --model ${model} --file ${file} --git-repo ${repoPath} "Optimize and improve this file, considering its dependencies"`;
+  execSync(command, { stdio: 'inherit' });
+
+  return branchName;
+}
 
 async function optimizeAllFiles(repoPath, model) {
   const git = simpleGit(repoPath);
