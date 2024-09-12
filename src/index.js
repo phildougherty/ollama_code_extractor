@@ -9,6 +9,8 @@ const { saveCodeToGit } = require('./gitManager');
 const { getChatCompletion } = require('./ollama');
 const { getDependencies } = require('./dependencyAnalyzer');
 const { optimizeAllFiles } = require('./optimizeAllFiles');
+const { checkBranchChanges } = require('./checkBranchChanges');
+
 
 async function isGitRepository(dir) {
   try {
@@ -68,12 +70,26 @@ async function main() {
       type: 'boolean',
       description: 'Optimize all source files in the repository'
     })
+    .option('check-changes', {
+      alias: 'c',
+      type: 'boolean',
+      description: 'Check for changes in optimization branches after processing'
+    })
     .help('h')
     .alias('h', 'help')
     .epilog('For more information, visit https://github.com/yourusername/code-optimize-extractor')
     .argv;
 
-  let { model, file: singleFile, gitRepo, prompt, optimizeAll } = argv;
+  let { model, file: singleFile, gitRepo, prompt, optimizeAll, checkChanges } = argv;
+
+  // Check if the specified directory is a git repository
+  const git = simpleGit(gitRepo);
+  const isRepo = await git.checkIsRepo();
+  if (!isRepo) {
+    console.error(`Error: The specified path is not a git repository: ${gitRepo}`);
+    console.error('Please run this command from within a git repository or specify a valid git repository using --git-repo');
+    process.exit(1);
+  }
 
   // Check if the specified directory is a git repository
   if (!(await isGitRepository(gitRepo))) {
@@ -85,8 +101,12 @@ async function main() {
   if (optimizeAll) {
     console.log('Starting optimization process for all files...');
     await optimizeAllFiles(gitRepo, model);
+    
+    if (checkChanges) {
+      console.log('\nChecking for changes in optimization branches...');
+      await checkBranchChanges(gitRepo);
+    }
   } else if (singleFile) {
-    // Existing single file optimization logic
     singleFile = path.resolve(gitRepo, singleFile);
     if (!(await isFile(singleFile))) {
       console.error(`Error: ${singleFile} is not a file or doesn't exist.`);
@@ -96,7 +116,7 @@ async function main() {
     console.log(`Analyzing dependencies for ${singleFile}...`);
     const baseDir = path.dirname(singleFile);
     try {
-      const dependencies = await getDependencies(singleFile, baseDir);
+      const dependencies = await getDependencies(singleFile, baseDir, gitRepo);
       const files = dependencies.map(dep => path.join(baseDir, dep));
       console.log(`Found ${files.length} dependent files.`);
 
@@ -136,6 +156,11 @@ For multiple files, repeat this format for each file.
         console.log(`Extracted ${extractedFiles.length} file(s) from the response.`);
         await saveCodeToGit(gitRepo, extractedFiles);
         console.log(`Code analysis committed to a new branch in the git repository: ${gitRepo}`);
+        
+        if (checkChanges) {
+          console.log('\nChecking for changes in the created branch...');
+          await checkBranchChanges(gitRepo);
+        }
       } else {
         console.log("No actionable insights found in the chat response.");
       }
