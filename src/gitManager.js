@@ -13,7 +13,7 @@ async function saveCodeToGit(repoPath, files) {
 
   // Create a new branch
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const branchName = `code-extractor-${timestamp}`;
+  const branchName = `code-analysis-${timestamp}`;
   await git.checkoutLocalBranch(branchName);
 
   // Write files
@@ -24,7 +24,7 @@ async function saveCodeToGit(repoPath, files) {
   }
 
   // Commit changes
-  await git.commit('Add generated code from Code Extractor');
+  await git.commit('Add code analysis from Code Extractor');
 
   console.log(`Created new branch: ${branchName}`);
 }

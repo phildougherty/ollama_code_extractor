@@ -1,95 +1,81 @@
-# Code Extractor
+I apologize for the confusion. Here's the README.md content without the escape characters, ready to be used directly:
 
-Code Extractor is a Node.js tool that uses Ollama's language models to generate, analyze, or modify code based on input files and prompts. It can process the model's response and save the resulting code files to the filesystem.
+# Code Optimize Extractor
+
+Code Optimize Extractor is a powerful CLI tool that leverages Ollama's language models to analyze, optimize, and complete code implementations. It extracts code from existing files, sends it to an AI model for improvement, and commits the optimized code to a new branch in your git repository.
 
 ## Features
 
-- Use any Ollama-compatible language model
-- Input one or more files as context for the model
-- Provide additional text prompts
-- Automatically extract and save generated code files
-- Structured JSON responses for consistent output
+- Analyze and optimize code using Ollama's AI models
+- Extract code and its dependencies from specified files
+- Generate complete, production-ready code implementations
+- Automatically commit optimized code to a new git branch
+- Syntax-highlighted output of extracted and optimized code
 
 ## Prerequisites
 
-- Node.js (v12 or later recommended)
+- Node.js (v14 or later recommended)
 - npm (usually comes with Node.js)
+- Git
 - Ollama installed and running on your machine
 
 ## Installation
 
 1. Clone this repository:
-
-```
-git clone https://github.com/yourusername/code-extractor.git
-cd code-extractor
-```
+   ```
+   git clone https://github.com/yourusername/code-optimize-extractor.git
+   cd code-optimize-extractor
+   ```
 
 2. Install dependencies:
-```
-npm install
-```
+   ```
+   npm install
+   ```
 
-3. 3. (Optional) Create a `.env` file in the project root and specify your preferred Ollama model:
-OLLAMA_MODEL=codellama
-
-Run
-Copy Code
+3. Make the CLI tool globally accessible:
+   ```
+   npm link
+   ```
 
 ## Usage
 
-Run the script using npm with various options:
-npm start [--model model_name] [--file filepath1 [--file filepath2 ...]] [prompt]
+Run the tool from within a git repository:
 
-Run
-Copy Code
+```
+code-optimize-extractor [options]
+```
 
 Options:
-- `--model`: Specify the Ollama model to use (optional, defaults to the one in .env or 'llama2')
-- `--file`: Specify one or more input files (optional, can be used multiple times)
-- `prompt`: Additional text prompt (optional)
+- `--model`, `-m`: Specify the Ollama model to use (default: llama3.1:8b)
+- `--file`, `-f`: Specify a single file to analyze along with its dependencies
+- `--git-repo`, `-g`: Specify the path to the git repository (default: current working directory)
+- `--prompt`, `-p`: Additional text prompt for the model
 
-### Examples
+Examples:
 
-1. Using a specific model and a text prompt:
-npm start --model codellama "Create a JavaScript function to sort an array of objects by a specific property"
+1. Optimize a specific file:
+   ```
+   code-optimize-extractor --file ./src/main.js "Optimize this file for performance"
+   ```
 
-Copy Code
+2. Use a different Ollama model:
+   ```
+   code-optimize-extractor --model codellama --file ./app.js "Refactor this code"
+   ```
 
-2. Using input files:
-npm start --file /path/to/file1.py --file /path/to/file2.js "Analyze these files and suggest improvements"
+3. Specify a different git repository:
+   ```
+   code-optimize-extractor --git-repo /path/to/repo --file ./src/app.js "Implement missing features"
+   ```
 
-Run
-Copy Code
+## How It Works
 
-3. Combining model, files, and prompt:
-npm start --model codellama --file /path/to/file1.py --file /path/to/file2.js "Refactor these files to improve performance"
-
-Copy Code
-
-4. Using just files without an additional prompt:
-npm start --file /path/to/file1.py --file /path/to/file2.js
-
-Run
-Copy Code
-
-## Output
-
-Generated code files will be saved in the `output` directory within the project folder. The filenames are determined by the model's response.
-
-## Project Structure
-code-extractor/
-├── src/
-│ ├── index.js # Main script
-│ ├── codeExtractor.js # Code extraction logic
-│ ├── ollama.js # Ollama API interaction
-│ └── fileSystem.js # File I/O operations
-├── package.json
-├── .env # (Optional) Environment variables
-└── README.md
-
-Run
-Copy Code
+1. The tool checks if the specified directory is a git repository.
+2. It analyzes the specified file and its dependencies.
+3. The code is sent to the Ollama API along with the optimization prompt.
+4. The API returns optimized code implementations.
+5. The tool extracts the code from the API response and displays it with syntax highlighting.
+6. The optimized code is committed to a new branch in the git repository.
 
 ## Contributing
 
@@ -98,4 +84,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is open source and available under the [MIT License](LICENSE).
-
