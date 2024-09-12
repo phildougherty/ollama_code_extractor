@@ -1,5 +1,3 @@
-I apologize for the confusion. Here's the README.md content without the escape characters, ready to be used directly:
-
 # Code Optimize Extractor
 
 Code Optimize Extractor is a powerful CLI tool that leverages Ollama's language models to analyze, optimize, and complete code implementations. It extracts code from existing files, sends it to an AI model for improvement, and commits the optimized code to a new branch in your git repository.
