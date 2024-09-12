@@ -1,12 +1,11 @@
 # Code Optimize Extractor
 
-Code Optimize Extractor is a powerful CLI tool that leverages Ollama's language models to analyze, optimize, and complete code implementations. It extracts code from existing files, sends it to an AI model for improvement, and commits the optimized code to a new branch in your git repository.
+Code Optimize Extractor is a CLI tool that leverages Ollama's language models to complete code implementations. It sends the code you select and sends related files as context to an AI model for improvement, then commits the optimized code to a new branch in your git repository.
 
 ## Features
 
 - Analyze and optimize code using Ollama's AI models
 - Extract code and its dependencies from specified files
-- Generate complete, production-ready code implementations
 - Automatically commit optimized code to a new git branch
 - Syntax-highlighted output of extracted and optimized code
 
